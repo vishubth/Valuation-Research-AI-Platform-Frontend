@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiClient, ApiError } from "../../../lib/api-client";
 import { useAuth } from "../../../lib/auth-context";
 import { useGates } from "../../../lib/hooks";
@@ -36,8 +37,17 @@ export default function BusinessProfilePage() {
   });
 
   const g2 = (gatesQuery.data ?? []).find((g) => g.gate_key === "G2");
+  const g1 = (gatesQuery.data ?? []).find((g) => g.gate_key === "G1");
   const isNotFound =
     profileQuery.isError && profileQuery.error instanceof ApiError && profileQuery.error.status === 404;
+
+  const [retriggered, setRetriggered] = useState(false);
+  const retriggerMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.post(`/engagements/${id}/gates/G1/retrigger`, {});
+    },
+    onSuccess: () => { setRetriggered(true); setTimeout(() => setRetriggered(false), 3000); },
+  });
 
   if (profileQuery.isLoading) return <Spinner />;
 
@@ -50,7 +60,26 @@ export default function BusinessProfilePage() {
           </svg>
         </div>
         <p className="text-sm font-medium text-slate-400">Not yet generated</p>
-        <p className="mt-1 text-xs text-slate-600">Approve G1 and wait for the research agent to run.</p>
+        <p className="mt-1 text-xs text-slate-600">
+          {g1?.status === "approved" ? "Pipeline may have stalled — retrigger below." : "Approve G1 and wait for the pipeline to run."}
+        </p>
+        {g1?.status === "approved" && (
+          <button
+            disabled={retriggerMutation.isPending}
+            onClick={() => retriggerMutation.mutate()}
+            className="mt-4 flex items-center gap-1.5 rounded-lg border border-amber-500/30 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/10 disabled:opacity-40 transition-colors"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {retriggerMutation.isPending ? "Queuing…" : retriggered ? "Pipeline queued!" : "Retrigger Pipeline"}
+          </button>
+        )}
+        {retriggerMutation.isError && (
+          <p className="mt-2 text-xs text-red-400">
+            {retriggerMutation.error instanceof ApiError ? retriggerMutation.error.message : "Failed to retrigger."}
+          </p>
+        )}
       </div>
     );
   }

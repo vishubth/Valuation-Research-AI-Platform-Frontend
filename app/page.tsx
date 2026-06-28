@@ -8,20 +8,9 @@ import { apiClient, ApiError } from "./lib/api-client";
 import type { Engagement } from "./lib/types";
 import { StatusBadge } from "./components/Badge";
 import { Spinner } from "./components/Spinner";
+import { relativeTime } from "./lib/format";
 
-const STATUS_OPTIONS = ["intake", "pending", "processing", "draft", "approved", "failed", "archived"];
-
-function formatDate(iso?: string) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const diff = Date.now() - d.getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString();
-}
+const STATUS_OPTIONS = ["intake", "completed", "archived"];
 
 function StatCard({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color: string }) {
   return (
@@ -222,7 +211,7 @@ export default function EngagementListPage() {
                   <td className="px-5 py-3.5 text-slate-400">{eng.purpose || "—"}</td>
                   <td className="px-5 py-3.5"><StatusBadge status={eng.status} /></td>
                   <td className="px-5 py-3.5 font-mono text-xs text-slate-500">{eng.current_stage || "—"}</td>
-                  <td className="px-5 py-3.5 text-slate-500">{formatDate(eng.created_at)}</td>
+                  <td className="px-5 py-3.5 text-slate-500">{relativeTime(eng.created_at)}</td>
                   <td className="px-5 py-3.5 text-slate-700 group-hover:text-slate-400">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />

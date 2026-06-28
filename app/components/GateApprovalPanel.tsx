@@ -32,6 +32,7 @@ export function GateApprovalPanel({ engagementId, gate, currentUserRole, initial
   const [approach, setApproach] = useState(initialApproach ?? "income");
   const [error, setError] = useState<string | null>(null);
 
+  const [retriggered, setRetriggered] = useState(false);
   const isG4 = gate.gate_key === "G4";
   const canApprove = roleAllowsApprove(gate.gate_key, currentUserRole);
   const decided = gate.status === "approved" || gate.status === "rejected";
@@ -45,17 +46,26 @@ export function GateApprovalPanel({ engagementId, gate, currentUserRole, initial
     mutationFn: async () => {
       const body: Record<string, unknown> = {};
       if (isG4) body.selected_approach = approach;
+      if (notes.trim()) body.notes = notes.trim();
       await apiClient.post(`/engagements/${engagementId}/gates/${gate.gate_key}/approve`, body);
     },
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : "Approve failed."),
   });
 
+  const retriggerMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.post(`/engagements/${engagementId}/gates/${gate.gate_key}/retrigger`, {});
+    },
+    onSuccess: () => { setRetriggered(true); setTimeout(() => setRetriggered(false), 3000); invalidate(); },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Retrigger failed."),
+  });
+
   const rejectMutation = useMutation({
     mutationFn: async () => {
       await apiClient.post(`/engagements/${engagementId}/gates/${gate.gate_key}/reject`, { notes });
     },
-    onSuccess: () => { setShowReject(false); setNotes(""); invalidate(); },
+    onSuccess: () => { setShowReject(false); setNotes(""); setError(null); invalidate(); },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Reject failed."),
   });
 
@@ -84,22 +94,39 @@ export function GateApprovalPanel({ engagementId, gate, currentUserRole, initial
       {/* Actions */}
       <div className="px-6 py-4">
         {decided ? (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${gate.status === "approved" ? "bg-emerald-500" : "bg-red-500"}`} />
-              <span className="font-medium text-slate-300">
-                {gate.status === "approved" ? "Approved" : "Rejected"} by{" "}
-                {gate.approved_by_name || gate.approved_by_email || "—"}
-              </span>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${gate.status === "approved" ? "bg-emerald-500" : "bg-red-500"}`} />
+                <span className="font-medium text-slate-300">
+                  {gate.status === "approved" ? "Approved" : "Rejected"} by{" "}
+                  {gate.approved_by_name || gate.approved_by_email || "—"}
+                </span>
+              </div>
+              {gate.approved_at && (
+                <span className="text-slate-600 text-xs">{new Date(gate.approved_at).toLocaleString()}</span>
+              )}
+              {gate.notes && <span className="text-xs italic text-slate-600">"{gate.notes}"</span>}
+              {gate.selected_approach && (
+                <span className="rounded bg-white/[0.06] px-2 py-0.5 text-xs text-slate-400">
+                  Approach: {gate.selected_approach}
+                </span>
+              )}
             </div>
-            {gate.approved_at && (
-              <span className="text-slate-600 text-xs">{new Date(gate.approved_at).toLocaleString()}</span>
-            )}
-            {gate.notes && <span className="text-xs italic text-slate-600">"{gate.notes}"</span>}
-            {gate.selected_approach && (
-              <span className="rounded bg-white/[0.06] px-2 py-0.5 text-xs text-slate-400">
-                Approach: {gate.selected_approach}
-              </span>
+            {gate.status === "approved" && canApprove && (
+              <div className="flex items-center gap-3">
+                <button
+                  disabled={retriggerMutation.isPending}
+                  onClick={() => { setError(null); retriggerMutation.mutate(); }}
+                  className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 px-3 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-500/10 disabled:opacity-40 transition-colors"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {retriggerMutation.isPending ? "Retriggering…" : retriggered ? "Pipeline queued!" : "Retrigger Pipeline"}
+                </button>
+                {error && <p className="text-xs text-red-400">{error}</p>}
+              </div>
             )}
           </div>
         ) : (
@@ -124,20 +151,29 @@ export function GateApprovalPanel({ engagementId, gate, currentUserRole, initial
               </p>
             )}
             {!showReject ? (
-              <div className="flex gap-2">
-                <button
-                  disabled={!canApprove || approveMutation.isPending}
-                  onClick={() => { setError(null); approveMutation.mutate(); }}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors"
-                >
-                  {approveMutation.isPending ? "Approving…" : "Approve"}
-                </button>
-                <button
-                  onClick={() => { setError(null); setShowReject(true); }}
-                  className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  Reject
-                </button>
+              <div className="space-y-2">
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Approval notes (optional)"
+                  rows={2}
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
+                />
+                <div className="flex gap-2">
+                  <button
+                    disabled={!canApprove || approveMutation.isPending}
+                    onClick={() => { setError(null); approveMutation.mutate(); }}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40 transition-colors"
+                  >
+                    {approveMutation.isPending ? "Approving…" : "Approve"}
+                  </button>
+                  <button
+                    onClick={() => { setError(null); setShowReject(true); setNotes(""); }}
+                    className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -166,9 +202,9 @@ export function GateApprovalPanel({ engagementId, gate, currentUserRole, initial
                 </div>
               </div>
             )}
-            {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
         )}
+        {!decided && error && <p className="mt-2 text-sm text-red-400">{error}</p>}
       </div>
     </div>
   );
