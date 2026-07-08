@@ -123,6 +123,7 @@ export default function EngagementLayout({ children }: { children: ReactNode }) 
     { href: `/engagements/${id}/research`, label: "Research" },
     { href: `/engagements/${id}/methodology`, label: "Methodology" },
     { href: `/engagements/${id}/comparables`, label: "Comparables" },
+    { href: `/engagements/${id}/projections`, label: "Projections" },
     { href: `/engagements/${id}/dcf`, label: "DCF" },
     { href: `/engagements/${id}/report`, label: "Report" },
     { href: `/engagements/${id}/review`, label: "Review" },

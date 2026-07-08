@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient, ApiError } from "../../../lib/api-client";
+import { ApiError } from "../../../lib/api-client";
 import { useAuth } from "../../../lib/auth-context";
 import { useComparableSet, useDcfModel, useGates } from "../../../lib/hooks";
 import { StatusBadge } from "../../../components/Badge";
@@ -84,69 +82,6 @@ function SensitivityGridTable({ grid }: { grid: SensitivityGrid }) {
   );
 }
 
-function DcfEditForm({ model, engagementId }: { model: DcfModel; engagementId: string }) {
-  const queryClient = useQueryClient();
-  const [waccText, setWaccText] = useState(JSON.stringify(model.wacc_inputs ?? {}, null, 2));
-  const [projText, setProjText] = useState(JSON.stringify(model.projection_inputs ?? {}, null, 2));
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      let wacc_inputs: unknown;
-      let projection_inputs: unknown;
-      try {
-        wacc_inputs = JSON.parse(waccText || "{}");
-        projection_inputs = JSON.parse(projText || "{}");
-      } catch {
-        throw new ApiError("invalid_json", "WACC or projection inputs are not valid JSON.");
-      }
-      await apiClient.patch(`/dcf-models/${model.id}/inputs`, { wacc_inputs, projection_inputs });
-    },
-    onSuccess: () => {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-      queryClient.invalidateQueries({ queryKey: ["dcf-model", engagementId] });
-    },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Update failed."),
-  });
-
-  return (
-    <Card title="Edit Inputs (Power Tool)">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-slate-600">WACC Inputs (JSON)</label>
-          <textarea
-            value={waccText}
-            onChange={(e) => setWaccText(e.target.value)}
-            rows={8}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3.5 py-2.5 font-mono text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-slate-600">Projection Inputs (JSON)</label>
-          <textarea
-            value={projText}
-            onChange={(e) => setProjText(e.target.value)}
-            rows={8}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3.5 py-2.5 font-mono text-xs text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-      </div>
-      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          disabled={mutation.isPending}
-          onClick={() => { setError(null); mutation.mutate(); }}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40 transition-colors"
-        >
-          {mutation.isPending ? "Recalculating…" : "Recalculate"}
-        </button>
-        {saved && <span className="text-sm text-emerald-400">Saved — model & narrative refreshed</span>}
-      </div>
-    </Card>
-  );
-}
 
 export default function DcfPage() {
   const params = useParams<{ id: string }>();
@@ -188,7 +123,7 @@ export default function DcfPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-600">DCF Model</h2>
-        {m.status && <StatusBadge status={m.status} />}
+        {g5 && <StatusBadge status={g5.status === "approved" ? "approved" : "pending review"} />}
       </div>
 
       {m.error_message && <ErrorBox>{m.error_message}</ErrorBox>}
@@ -275,8 +210,6 @@ export default function DcfPage() {
           <p className="whitespace-pre-line text-sm leading-relaxed text-slate-300">{m.narrative}</p>
         </div>
       )}
-
-      <DcfEditForm model={m} engagementId={id} />
 
       {g5 && user && (
         <GateApprovalPanel engagementId={id} gate={g5} currentUserRole={user.role}>

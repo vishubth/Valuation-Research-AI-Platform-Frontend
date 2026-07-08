@@ -29,11 +29,12 @@ export function relativeTime(iso?: string | null): string {
   return `${years}y ago`;
 }
 
-// Compact currency with M/B suffix.
+// Compact currency with M/B/T suffix.
 export function formatMoney(n?: number | null): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "—";
   const abs = Math.abs(n);
   const sign = n < 0 ? "-" : "";
+  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
   if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
   if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
   if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(1)}K`;

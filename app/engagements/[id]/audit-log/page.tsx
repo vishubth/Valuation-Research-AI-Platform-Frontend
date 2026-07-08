@@ -17,8 +17,37 @@ function summarizeDetails(entry: AuditEntry): string {
   if (action.startsWith("gate")) {
     const gate = (p.gate_key ?? p.gate ?? "") as string;
     const notes = p.notes ? ` — "${p.notes}"` : "";
+    // G4: show recommended vs selected, flag override
+    if (gate === "G4" && (p.recommended_approach || p.selected_approach)) {
+      const rec = p.recommended_approach ?? "none";
+      const sel = p.selected_approach ?? "none";
+      const override = p.approach_overridden ? " ⚠ override" : "";
+      return `${gate} · recommended: ${rec} → chosen: ${sel}${override}${notes}`;
+    }
     const approach = p.selected_approach ? ` (approach: ${p.selected_approach})` : "";
     return [gate, approach, notes].filter(Boolean).join("") || "—";
+  }
+  if (action === "projection.drivers_edited") {
+    const changes = p.changes as Record<string, { before: Record<string, unknown>; after: Record<string, unknown> }> | undefined;
+    if (!changes) return "—";
+    const parts: string[] = [];
+    for (const [group, { before, after }] of Object.entries(changes)) {
+      const groupLabel = group.replace("_drivers", "").toUpperCase();
+      for (const key of Object.keys(after ?? {})) {
+        const oldVal = (before?.[key] as { value?: unknown } | null)?.value ?? "—";
+        const newVal = (after[key] as { value?: unknown } | null)?.value ?? "—";
+        parts.push(`${groupLabel}.${key}: ${oldVal} → ${newVal}`);
+      }
+    }
+    return parts.join("; ") || "—";
+  }
+  if (action === "projection.wacc_edited") {
+    const before = p.changes?.before as Record<string, unknown> | undefined;
+    const after = p.changes?.after as Record<string, unknown> | undefined;
+    if (!after) return "—";
+    return Object.keys(after)
+      .map((k) => `${k}: ${before?.[k] ?? "—"} → ${after[k]}`)
+      .join("; ") || "—";
   }
   if (action.startsWith("config")) {
     return (p.config_key as string) ?? "—";

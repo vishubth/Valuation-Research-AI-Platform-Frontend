@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, ApiError } from "../../../lib/api-client";
-import { useComparableSet } from "../../../lib/hooks";
+import { useComparableSet, useGates } from "../../../lib/hooks";
 import { StatusBadge } from "../../../components/Badge";
 import { Spinner } from "../../../components/Spinner";
 import { Card, EmptyState, ErrorBox } from "../../../components/Section";
@@ -98,13 +98,29 @@ export default function ComparablesPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const setQuery = useComparableSet(id);
+  const gatesQuery = useGates(id);
 
   const isNotFound =
     setQuery.isError && setQuery.error instanceof ApiError && setQuery.error.status === 404;
 
   if (setQuery.isLoading) return <Spinner />;
-  if (isNotFound)
-    return <EmptyState title="No comparable set yet" subtitle="Approve G4 and wait for the comparables agent to run." />;
+
+  if (isNotFound) {
+    const g4Approved = (gatesQuery.data ?? []).some(
+      (g) => g.gate_key === "G4" && g.status === "approved"
+    );
+    return (
+      <EmptyState
+        title="No comparable set yet"
+        subtitle={
+          g4Approved
+            ? "The comparables agent did not produce results for this engagement."
+            : "Approve G4 and wait for the comparables agent to run."
+        }
+      />
+    );
+  }
+
   if (setQuery.isError)
     return <ErrorBox>{setQuery.error instanceof ApiError ? setQuery.error.message : "Failed to load comparable set."}</ErrorBox>;
 

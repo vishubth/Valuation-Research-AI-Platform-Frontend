@@ -26,6 +26,7 @@ export type EngagementStatus =
   | "processing"
   | "draft"
   | "approved"
+  | "completed"
   | "failed"
   | "archived"
   | string;
@@ -36,6 +37,7 @@ export interface Engagement {
   purpose?: string | null;
   status: EngagementStatus;
   current_stage?: string;
+  pipeline_error?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -89,7 +91,9 @@ export interface DocumentRecord {
 }
 
 export interface RiskFactor {
-  factor: string;
+  factor?: string;
+  category?: string;
+  description?: string;
   severity?: string;
   source?: string;
 }
@@ -307,6 +311,161 @@ export interface AdminUser {
   role: string;
   is_active: boolean;
   created_at?: string;
+}
+
+// Projection Model — G5 output
+export interface DriverSuggestion {
+  value: number;
+  method?: string | null;
+  candidates?: Record<string, { value: number; label?: string }> | null;
+  rationale?: string | null;
+  sources?: string[] | null;
+  confidence?: "high" | "medium" | "low" | string | null;
+  sensitivity_range?: { low?: number; base?: number; high?: number } | null;
+}
+
+export interface ISDrivers {
+  revenue_growth_yr1?: DriverSuggestion;
+  revenue_growth_yr2?: DriverSuggestion;
+  revenue_growth_yr3?: DriverSuggestion;
+  revenue_growth_yr4?: DriverSuggestion;
+  revenue_growth_yr5?: DriverSuggestion;
+  cogs_pct_revenue?: DriverSuggestion;
+  rd_pct_revenue?: DriverSuggestion;
+  sga_pct_revenue?: DriverSuggestion;
+  da_pct_revenue?: DriverSuggestion;
+  tax_rate?: DriverSuggestion;
+  interest_rate_on_debt?: DriverSuggestion;
+  [key: string]: DriverSuggestion | undefined;
+}
+
+export interface BSDrivers {
+  ar_days?: DriverSuggestion;
+  inventory_days?: DriverSuggestion;
+  ap_days?: DriverSuggestion;
+  capex_pct_revenue?: DriverSuggestion;
+  other_ca_pct_revenue?: DriverSuggestion;
+  other_cl_pct_revenue?: DriverSuggestion;
+  [key: string]: DriverSuggestion | undefined;
+}
+
+export interface CFDrivers {
+  sbc_pct_sga?: DriverSuggestion;
+  dividend_payout_ratio?: DriverSuggestion;
+  [key: string]: DriverSuggestion | undefined;
+}
+
+export interface WACCSuggestion {
+  risk_free_rate?: DriverSuggestion;
+  equity_risk_premium?: DriverSuggestion;
+  beta?: DriverSuggestion;
+  size_premium?: DriverSuggestion;
+  cost_of_debt?: DriverSuggestion;
+  tax_rate?: DriverSuggestion;
+  equity_pct_capital?: DriverSuggestion;
+  [key: string]: DriverSuggestion | undefined;
+}
+
+export interface HistoricalYear {
+  year: number;
+  revenue?: number | null;
+  cost_of_sales?: number | null;
+  gross_profit?: number | null;
+  research_and_development?: number | null;
+  sga?: number | null;
+  operating_income?: number | null;
+  da?: number | null;
+  ebitda?: number | null;
+  interest_expense?: number | null;
+  pretax_income?: number | null;
+  tax_provision?: number | null;
+  net_income?: number | null;
+  sbc?: number | null;
+  cash?: number | null;
+  accounts_receivable?: number | null;
+  inventory?: number | null;
+  other_current_assets?: number | null;
+  total_current_assets?: number | null;
+  ppe_net?: number | null;
+  goodwill?: number | null;
+  total_assets?: number | null;
+  accounts_payable?: number | null;
+  other_current_liabilities?: number | null;
+  total_current_liabilities?: number | null;
+  long_term_debt?: number | null;
+  total_liabilities?: number | null;
+  total_equity?: number | null;
+  operating_cash_flow?: number | null;
+  capex?: number | null;
+  free_cash_flow?: number | null;
+  dividends_paid?: number | null;
+}
+
+export interface ProjectedYear {
+  year: number;
+  revenue: number;
+  cost_of_sales: number;
+  gross_profit: number;
+  rd: number;
+  sga: number;
+  ebit: number;
+  da: number;
+  ebitda: number;
+  interest_expense: number;
+  pretax_income: number;
+  tax_provision: number;
+  net_income: number;
+  sbc: number;
+  dividends: number;
+  accounts_receivable: number;
+  inventory: number;
+  accounts_payable: number;
+  other_current_assets: number;
+  other_current_liabilities: number;
+  capex: number;
+  ppe_net: number;
+  lt_debt: number;
+  goodwill: number;
+  cash: number;
+  total_current_assets: number;
+  total_assets: number;
+  total_current_liabilities: number;
+  total_liabilities: number;
+  total_equity: number;
+  balance_sheet_parity_check: boolean;
+  cfo: number;
+  cfi: number;
+  cff: number;
+  net_change_in_cash: number;
+  nopat: number;
+  delta_working_capital: number;
+  ufcf: number;
+}
+
+export interface ProjectionStatements {
+  projected_years: ProjectedYear[];
+  ufcf_series: number[];
+  terminal_year_revenue?: number;
+  terminal_year_ebitda?: number;
+  terminal_year_ebit?: number;
+}
+
+export interface ProjectionModel {
+  id: string;
+  artifact_id?: string | null;
+  engagement_id: string;
+  version?: number | null;
+  status?: string | null;
+  historical_actuals?: { years: HistoricalYear[]; currency_unit: string } | null;
+  wacc_suggestion?: WACCSuggestion | null;
+  is_drivers?: ISDrivers | null;
+  bs_drivers?: BSDrivers | null;
+  cf_drivers?: CFDrivers | null;
+  projected_statements?: ProjectionStatements | null;
+  computed_outputs?: { sensitivity_grid?: SensitivityGrid; [key: string]: unknown } | null;
+  error_message?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Config

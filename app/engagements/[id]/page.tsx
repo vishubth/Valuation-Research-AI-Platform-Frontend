@@ -32,16 +32,23 @@ export default function OverviewPage() {
       <div className="rounded-xl border border-white/[0.06] bg-[#161b22] px-6 py-5">
         <h2 className="mb-5 text-[11px] font-semibold uppercase tracking-widest text-slate-600">Engagement Details</h2>
         {eng ? (
-          <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
-            <Field label="Client name">{eng.client_name || "—"}</Field>
-            <Field label="Purpose">{eng.purpose || "—"}</Field>
-            <Field label="Status"><StatusBadge status={eng.status} /></Field>
-            <Field label="Current stage">
-              <span className="font-mono text-xs text-slate-400">{eng.current_stage || "—"}</span>
-            </Field>
-            <Field label="Created">{formatTs(eng.created_at)}</Field>
-            <Field label="Updated">{formatTs(eng.updated_at)}</Field>
-          </dl>
+          <>
+            <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+              <Field label="Client name">{eng.client_name || "—"}</Field>
+              <Field label="Purpose">{eng.purpose || "—"}</Field>
+              <Field label="Status"><StatusBadge status={eng.status} /></Field>
+              <Field label="Current stage">
+                <span className="font-mono text-xs text-slate-400">{eng.current_stage || "—"}</span>
+              </Field>
+              <Field label="Created">{formatTs(eng.created_at)}</Field>
+              <Field label="Updated">{formatTs(eng.updated_at)}</Field>
+            </dl>
+            {eng.pipeline_error && (
+              <div className="mt-5 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                <span className="font-semibold">Pipeline error: </span>{eng.pipeline_error}
+              </div>
+            )}
+          </>
         ) : <Spinner />}
       </div>
 

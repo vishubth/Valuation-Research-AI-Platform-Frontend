@@ -9,6 +9,7 @@ import type {
   MethodologyRecommendation,
   ComparableSet,
   DcfModel,
+  ProjectionModel,
   Report,
   ReviewChecklist,
   AuditEntry,
@@ -76,6 +77,21 @@ export function useComparableSet(engagementId: string) {
     queryFn: async () => {
       const res = await apiClient.get<ComparableSet>(
         `/engagements/${engagementId}/comparable-sets`
+      );
+      return res.data;
+    },
+  });
+}
+
+export function useProjection(engagementId: string) {
+  return useQuery({
+    queryKey: ["projection", engagementId],
+    enabled: !!engagementId,
+    staleTime: 0,
+    retry: false,
+    queryFn: async () => {
+      const res = await apiClient.get<ProjectionModel>(
+        `/projections/${engagementId}`
       );
       return res.data;
     },

@@ -150,9 +150,9 @@ export default function BusinessProfilePage() {
             <tbody className="divide-y divide-white/[0.04]">
               {p.risk_factors.map((r, i) => (
                 <tr key={i}>
-                  <td className="py-3 pr-6 text-slate-200">{r.factor}</td>
+                  <td className="py-3 pr-6 text-slate-200">{r.description || r.factor || "—"}</td>
                   <td className="py-3 pr-6"><Badge tone={severityTone(r.severity)}>{r.severity || "—"}</Badge></td>
-                  <td className="py-3 text-slate-500">{r.source || "—"}</td>
+                  <td className="py-3 text-slate-500">{r.category || r.source || "—"}</td>
                 </tr>
               ))}
             </tbody>

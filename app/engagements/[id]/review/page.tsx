@@ -46,7 +46,9 @@ export default function ReviewPage() {
   const gatesQuery = useGates(id);
   const reviewQuery = useReviewChecklist(id);
 
+  const g6 = (gatesQuery.data ?? []).find((g) => g.gate_key === "G6");
   const g7 = (gatesQuery.data ?? []).find((g) => g.gate_key === "G7");
+  const g6Approved = g6?.status === "approved";
   const isNotFound =
     reviewQuery.isError && reviewQuery.error instanceof ApiError && reviewQuery.error.status === 404;
 
@@ -65,30 +67,50 @@ export default function ReviewPage() {
 
   return (
     <div className="space-y-4">
-      <div className={`rounded-xl border-2 px-6 py-5 ${overall.cls}`}>
-        <p className="text-[11px] font-semibold uppercase tracking-widest opacity-70">Overall Status</p>
-        <p className="mt-1 text-2xl font-bold">{overall.label}</p>
-      </div>
+      {g6Approved ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-5">
+          <div className="flex items-center gap-3 mb-3">
+            <svg className="h-5 w-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-semibold text-emerald-400">Review Approved</p>
+          </div>
+          <p className="text-sm text-slate-300">
+            {g6?.approved_by_name || g6?.approved_by_email || "Analyst"} confirmed all checklist items and approved this review
+            {g6?.approved_at ? ` on ${new Date(g6.approved_at).toLocaleString()}` : ""}.
+          </p>
+          {g6?.notes && (
+            <p className="mt-2 text-xs italic text-slate-500">"{g6.notes}"</p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className={`rounded-xl border-2 px-6 py-5 ${overall.cls}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest opacity-70">Overall Status</p>
+            <p className="mt-1 text-2xl font-bold">{overall.label}</p>
+          </div>
 
-      <Card title="Checklist">
-        {items.length === 0 ? (
-          <p className="text-sm text-slate-600">No checklist items.</p>
-        ) : (
-          <ul className="space-y-3">
-            {items.map((it, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="mt-0.5"><ItemIcon status={it.status} /></span>
-                <div>
-                  <p className="text-sm font-medium text-slate-200">{it.description || titleCase(it.item)}</p>
-                  {it.details && <p className="mt-0.5 text-xs text-slate-500">{it.details}</p>}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+          <Card title="Checklist">
+            {items.length === 0 ? (
+              <p className="text-sm text-slate-600">No checklist items.</p>
+            ) : (
+              <ul className="space-y-3">
+                {items.map((it, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="mt-0.5"><ItemIcon status={it.status} /></span>
+                    <div>
+                      <p className="text-sm font-medium text-slate-200">{it.description || titleCase(it.item)}</p>
+                      {it.details && <p className="mt-0.5 text-xs text-slate-500">{it.details}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </>
+      )}
 
-      {g7 && user && (
+      {g7 && user && g7.status !== "approved" && (
         <div className="space-y-2">
           <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-red-400">
             Final gate — admin approval required. Approving marks the engagement completed.
